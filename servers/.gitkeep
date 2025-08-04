@@ -1,0 +1,2 @@
+# This file ensures the servers directory is tracked by git
+# while allowing all other files in this directory to be gitignored

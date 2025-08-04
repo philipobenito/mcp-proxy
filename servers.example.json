@@ -1,0 +1,74 @@
+{
+    "servers": [
+        {
+            "name": "postgres-db",
+            "protocol": "stdio",
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-postgres"],
+            "env": {
+                "POSTGRES_CONNECTION_STRING": "postgresql://user:password@localhost:5432/database"
+            },
+            "restart": true,
+            "healthCheck": {
+                "interval": 30,
+                "timeout": 10,
+                "retries": 3
+            }
+        },
+        {
+            "name": "filesystem-server",
+            "protocol": "stdio",
+            "command": "docker",
+            "args": [
+                "run",
+                "--rm",
+                "-i",
+                "-v",
+                "/Users/shared:/workspace:ro",
+                "mcp/filesystem-server"
+            ],
+            "restart": true,
+            "healthCheck": {
+                "interval": 30,
+                "timeout": 10,
+                "retries": 3
+            }
+        },
+        {
+            "name": "git-server",
+            "protocol": "stdio",
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-git"],
+            "restart": true
+        },
+        {
+            "name": "web-search",
+            "protocol": "http",
+            "url": "http://localhost:8080/mcp",
+            "healthCheck": {
+                "interval": 30,
+                "timeout": 10,
+                "retries": 3
+            }
+        }
+    ],
+    "proxy": {
+        "port": 3000,
+        "host": "0.0.0.0",
+        "http2": true,
+        "cors": {
+            "origin": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allowedHeaders": ["Content-Type", "Authorization", "X-MCP-Session"]
+        },
+        "rateLimit": {
+            "windowMs": 60000,
+            "max": 1000
+        }
+    },
+    "logging": {
+        "level": "info",
+        "format": "json",
+        "output": "stdout"
+    }
+}
