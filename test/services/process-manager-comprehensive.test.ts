@@ -45,8 +45,11 @@ describe('ProcessManager - Comprehensive', () => {
 
     const mockDockerServer: DetectedServer = {
         name: 'test-docker-server',
-        command: 'docker',
-        args: ['run', '--rm', '-i', 'hello-world'],
+        command: 'node',
+        args: [
+            '-e',
+            'console.log("DOCKER_ENV:", process.env.DOCKER_ENV); setInterval(() => { console.log("running"); }, 200); setTimeout(() => process.exit(0), 1500)',
+        ],
         protocol: 'stdio',
         detectedType: ServerType.DOCKER,
         capabilities: {
