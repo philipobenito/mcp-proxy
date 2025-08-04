@@ -203,7 +203,10 @@ describe('ProcessManager - Comprehensive', () => {
             const crashingServer: DetectedServer = {
                 ...mockStdioServer,
                 name: 'crashing-server',
-                args: ['-e', 'console.log("starting"); setTimeout(() => { console.log("crashing"); process.exit(1); }, 1500)'], // Start successfully, then crash
+                args: [
+                    '-e',
+                    'console.log("starting"); setTimeout(() => { console.log("crashing"); process.exit(1); }, 1500)',
+                ], // Start successfully, then crash
             };
 
             const eventSpy = vi.fn();
