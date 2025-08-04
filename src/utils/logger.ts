@@ -12,53 +12,61 @@ export class Logger {
     private readonly logger: pino.Logger;
     private readonly context: LoggerContext;
 
-    constructor(config: Partial<LoggingConfig> = {}, context: LoggerContext = {}) {
-        const loggerConfig: pino.LoggerOptions = {
-            level: config.level || 'info',
-            formatters: {
-                level: label => ({ level: label }),
-            },
-            timestamp: pino.stdTimeFunctions.isoTime,
-            base: {
-                pid: process.pid,
-                hostname: process.env.HOSTNAME || 'localhost',
-                service: 'mcp-proxy',
-                version: this.getVersion(),
-            },
-        };
-
-        // Configure transport based on format and output
-        if (config.format === 'pretty' || process.env.NODE_ENV === 'development') {
-            loggerConfig.transport = {
-                target: 'pino-pretty',
-                options: {
-                    colorise: true,
-                    translateTime: 'SYS:standard',
-                    ignore: 'pid,hostname',
-                    messageFormat: '{component} [{serverName}:{port}] {msg}',
+    constructor(
+        config: Partial<LoggingConfig> = {},
+        context: LoggerContext = {},
+        loggerInstance?: pino.Logger
+    ) {
+        let logger: pino.Logger;
+        if (loggerInstance) {
+            logger = loggerInstance;
+        } else {
+            const loggerConfig: pino.LoggerOptions = {
+                level: config.level || 'info',
+                formatters: {
+                    level: label => ({ level: label }),
+                },
+                timestamp: pino.stdTimeFunctions.isoTime,
+                base: {
+                    pid: process.pid,
+                    hostname: process.env.HOSTNAME || 'localhost',
+                    service: 'mcp-proxy',
+                    version: this.getVersion(),
                 },
             };
-        }
 
-        // Handle file output
-        if (config.output === 'file' && config.file) {
-            loggerConfig.transport = {
-                target: 'pino/file',
-                options: {
-                    destination: config.file,
-                },
-            };
-        }
+            // Configure transport based on format and output
+            if (config.format === 'pretty' || process.env.NODE_ENV === 'development') {
+                loggerConfig.transport = {
+                    target: 'pino-pretty',
+                    options: {
+                        colorise: true,
+                        translateTime: 'SYS:standard',
+                        ignore: 'pid,hostname',
+                        messageFormat: '{component} [{serverName}:{port}] {msg}',
+                    },
+                };
+            }
 
-        this.logger = pino(loggerConfig);
+            // Handle file output
+            if (config.output === 'file' && config.file) {
+                loggerConfig.transport = {
+                    target: 'pino/file',
+                    options: {
+                        destination: config.file,
+                    },
+                };
+            }
+
+            logger = pino(loggerConfig);
+        }
+        this.logger = logger;
         this.context = context;
     }
 
     child(context: LoggerContext): Logger {
-        const childLogger = new Logger({}, { ...this.context, ...context });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (childLogger as any).logger = this.logger.child(context);
-        return childLogger;
+        const childPinoLogger = this.logger.child(context);
+        return new Logger({}, { ...this.context, ...context }, childPinoLogger);
     }
 
     debug(message: string, extra?: Record<string, unknown>): void {
