@@ -1,0 +1,8 @@
+admin:
+    name: MCP Proxy Team
+    title: MCP Proxy Maintainer
+    url: https://github.com/philipobenito/mcp-proxy
+    image_url: https://github.com/philipobenito.png
+    page: true
+    socials:
+        github: philipobenito

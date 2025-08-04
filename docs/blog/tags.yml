@@ -1,0 +1,38 @@
+facebook:
+    label: Facebook
+    permalink: /facebook
+    description: Facebook tag description
+
+mcp:
+  label: Model Context Protocol
+  permalink: /mcp
+
+proxy:
+  label: Proxy Server
+  permalink: /proxy
+
+self-hosted:
+  label: Self-Hosted
+  permalink: /self-hosted
+
+ai:
+  label: Artificial Intelligence
+  permalink: /ai
+
+docker:
+  label: Docker
+  permalink: /docker
+
+typescript:
+  label: TypeScript
+  permalink: /typescript
+
+docusaurus:
+    label: Docusaurus
+    permalink: /docusaurus
+    description: Docusaurus tag description
+
+hola:
+    label: Hola
+    permalink: /hola
+    description: Hola tag description

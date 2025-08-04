@@ -2,9 +2,17 @@
 import { createServer } from 'http';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { ConfigLoader, ConfigurationError, type Config } from './config/index.js';
+import { type DetectedServer, PortManager } from './services/index.js';
+import { initialiseLogger, getLogger } from './utils/index.js';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const HOST = process.env.HOST || '0.0.0.0';
+
+let appConfig: Config | null = null;
+let detectedServers: DetectedServer[] = [];
+let portManager: PortManager;
+let logger = getLogger();
 
 // Basic health check server for now
 const server = createServer((req, res) => {
@@ -30,10 +38,46 @@ const server = createServer((req, res) => {
                 version: getVersion(),
                 uptime: process.uptime(),
                 servers: {
-                    discovered: 0,
+                    discovered: appConfig?.servers.length || 0,
                     running: 0,
                     failed: 0,
                 },
+            })
+        );
+        return;
+    }
+
+    if (url.pathname === '/servers') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+            JSON.stringify({
+                servers: detectedServers.map(server => ({
+                    name: server.name,
+                    protocol: server.protocol,
+                    detectedType: server.detectedType,
+                    capabilities: server.capabilities,
+                    command: server.command,
+                    args: server.args,
+                    url: server.url,
+                    restart: server.restart,
+                    healthCheck: server.healthCheck,
+                    allocatedPort: portManager?.getPortForServer(server.name),
+                })),
+                count: detectedServers.length,
+                timestamp: new Date().toISOString(),
+            })
+        );
+        return;
+    }
+
+    if (url.pathname === '/ports') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+            JSON.stringify({
+                portRange: portManager?.getPortRangeInfo(),
+                allocations: portManager?.getAllocations() || [],
+                reservedPorts: portManager?.getReservedPorts() || [],
+                timestamp: new Date().toISOString(),
             })
         );
         return;
@@ -49,6 +93,7 @@ const server = createServer((req, res) => {
                 endpoints: {
                     health: '/health',
                     servers: '/servers',
+                    ports: '/ports',
                     metrics: '/metrics',
                 },
                 documentation: 'https://github.com/philipobenito/mcp-proxy',
@@ -77,26 +122,109 @@ function getVersion(): string {
     }
 }
 
-server.listen(PORT, HOST, () => {
-    console.log(`MCP Proxy started on http://${HOST}:${PORT}`);
-    console.log(`Health endpoint: http://${HOST}:${PORT}/health`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Node.js version: ${process.version}`);
-});
+async function initialiseApplication() {
+    try {
+        const configLoader = new ConfigLoader();
+        const result = await configLoader.loadConfigurationWithDetection();
+        appConfig = result.config;
+        detectedServers = result.detectedServers;
+
+        // Initialise logger with configuration
+        if (appConfig.logging) {
+            initialiseLogger(appConfig.logging);
+            logger = getLogger();
+        }
+
+        // Initialise port manager with environment-configurable range
+        const startPort = parseInt(process.env.MCP_PORT_START || '3001');
+        const endPort = parseInt(process.env.MCP_PORT_END || '3099');
+
+        portManager = new PortManager({
+            startPort,
+            endPort,
+            reservationTimeout: 60000,
+        });
+
+        logger.configLoaded(detectedServers.length, 'servers.json');
+
+        // Allocate ports for stdio servers that will need them
+        for (const server of detectedServers) {
+            if (server.capabilities.requiresStdio) {
+                try {
+                    const allocatedPort = await portManager.allocatePort(server.name);
+                    logger.portAllocated(server.name, allocatedPort);
+                } catch (error) {
+                    logger.portAllocationFailed(server.name, error);
+                }
+            } else {
+                logger.info('Server does not require port allocation', {
+                    serverName: server.name,
+                    protocol: server.protocol,
+                    detectedType: server.detectedType,
+                    component: 'port-manager',
+                });
+            }
+        }
+
+        const portInfo = portManager.getPortRangeInfo();
+        logger.info('Port manager initialised', {
+            allocated: portInfo.allocated,
+            total: portInfo.total,
+            range: `${portInfo.start}-${portInfo.end}`,
+            component: 'port-manager',
+        });
+
+        logger.appStarting(PORT, HOST);
+
+        server.listen(PORT, HOST, () => {
+            logger.appStarted(PORT, HOST);
+            logger.info('Service endpoints available', {
+                health: `http://${HOST}:${PORT}/health`,
+                servers: `http://${HOST}:${PORT}/servers`,
+                ports: `http://${HOST}:${PORT}/ports`,
+                component: 'application',
+            });
+            logger.info('Runtime information', {
+                environment: process.env.NODE_ENV || 'development',
+                nodeVersion: process.version,
+                component: 'application',
+            });
+        });
+    } catch (error) {
+        if (error instanceof ConfigurationError) {
+            logger.configError(error);
+        } else {
+            logger.error('Failed to initialise application', error, {
+                component: 'application',
+            });
+        }
+        process.exit(1);
+    }
+}
+
+// Start the application
+initialiseApplication();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-    console.log('Received SIGTERM, shutting down gracefully...');
-    server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-    });
+    logger.appShutdown('SIGTERM');
+    cleanup();
 });
 
 process.on('SIGINT', () => {
-    console.log('Received SIGINT, shutting down gracefully...');
+    logger.appShutdown('SIGINT');
+    cleanup();
+});
+
+function cleanup() {
     server.close(() => {
-        console.log('Server closed');
+        logger.info('Server closed', { component: 'application' });
+
+        if (portManager) {
+            portManager.cleanup();
+            logger.info('Port manager cleaned up', { component: 'port-manager' });
+        }
+
         process.exit(0);
     });
-});
+}

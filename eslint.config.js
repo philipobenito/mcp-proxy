@@ -1,7 +1,6 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
-import prettier from 'eslint-plugin-prettier';
 
 export default [
     js.configs.recommended,
@@ -13,14 +12,24 @@ export default [
                 ecmaVersion: 'latest',
                 sourceType: 'module',
             },
+            globals: {
+                process: 'readonly',
+                console: 'readonly',
+                URL: 'readonly',
+                Buffer: 'readonly',
+                setTimeout: 'readonly',
+                clearTimeout: 'readonly',
+                setInterval: 'readonly',
+                clearInterval: 'readonly',
+                NodeJS: 'readonly',
+                require: 'readonly',
+            },
         },
         plugins: {
             '@typescript-eslint': typescript,
-            prettier: prettier,
         },
         rules: {
             ...typescript.configs.recommended.rules,
-            'prettier/prettier': 'error',
             '@typescript-eslint/no-unused-vars': 'warn',
             '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/no-explicit-any': 'warn',
