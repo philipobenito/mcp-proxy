@@ -285,7 +285,7 @@ export class ProxyApplication {
     }
 
     private async handleBuiltinEndpoints(
-        req: IncomingMessage,
+        _req: IncomingMessage,
         res: ServerResponse,
         pathname: string
     ): Promise<boolean> {
@@ -453,7 +453,7 @@ export class ProxyApplication {
             error: message,
             statusCode,
             timestamp: new Date().toISOString(),
-            ...details,
+            ...(details && typeof details === 'object' ? details : {}),
         };
 
         this.sendJsonResponse(res, statusCode, error);

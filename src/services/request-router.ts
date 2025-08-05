@@ -99,7 +99,7 @@ export class RequestRouter {
             return null;
         }
 
-        const serverName = pathSegments[0];
+        const serverName = pathSegments[0]!; // We already checked pathSegments.length > 0
         const serverKey = this.config.caseSensitive ? serverName : serverName.toLowerCase();
         const server = this.servers.get(serverKey);
 
@@ -129,7 +129,7 @@ export class RequestRouter {
     private matchWildcardRoute(pathSegments: string[], fullPath: string): RouteMatch | null {
         // Try pattern matching for servers with wildcards in their names
         for (const [serverKey, server] of this.servers) {
-            if (this.matchWildcardPattern(serverKey, pathSegments[0])) {
+            if (this.matchWildcardPattern(serverKey, pathSegments[0]!)) {
                 let targetPath = '/';
                 if (this.config.stripServerPrefix && pathSegments.length > 1) {
                     targetPath = '/' + pathSegments.slice(1).join('/');
@@ -168,7 +168,7 @@ export class RequestRouter {
 
         // For now, just include the server name
         if (pathSegments.length > 0) {
-            params.server = pathSegments[0];
+            params.server = pathSegments[0]!;
         }
 
         return params;
@@ -193,7 +193,7 @@ export class RequestRouter {
             protocol: string;
             pattern: string;
         }>;
-    } {
+        } {
         const routes = Array.from(this.servers.values()).map(server => ({
             name: server.name,
             type: server.detectedType,

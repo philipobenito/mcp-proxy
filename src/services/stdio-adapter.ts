@@ -136,7 +136,7 @@ export class StdioHttpAdapter extends EventEmitter {
         }
 
         // Check for dangerous patterns in URLs
-        if (url.includes('<') || url.includes('>') || url.includes('"') || url.includes("'")) {
+        if (url.includes('<') || url.includes('>') || url.includes('"') || url.includes('\'')) {
             throw new Error('URL contains potentially dangerous characters');
         }
 

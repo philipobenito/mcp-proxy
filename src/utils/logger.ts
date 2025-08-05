@@ -23,18 +23,8 @@ export class Logger {
         } else {
             const logLevel = config.level || 'info';
 
-            // If silent mode, create a no-op logger
-            if (logLevel === 'silent') {
-                logger = pino({
-                    level: 'fatal',
-                    transport: {
-                        target: 'pino/file',
-                        options: {
-                            destination: '/dev/null',
-                        },
-                    },
-                });
-            } else {
+            // Create the logger with the specified log level
+            {
                 const loggerConfig: pino.LoggerOptions = {
                     level: logLevel,
                     formatters: {

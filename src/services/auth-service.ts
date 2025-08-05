@@ -28,7 +28,7 @@ export interface ServerAuthConfig extends AuthConfig {
 
 export class AuthenticationService extends EventEmitter {
     private readonly serverConfigs = new Map<string, ServerAuthConfig>();
-    private readonly globalConfig?: AuthConfig;
+    private readonly globalConfig: AuthConfig | undefined;
     private readonly logger = getLogger({ component: 'auth-service' });
 
     constructor(globalConfig?: AuthConfig) {
@@ -41,9 +41,11 @@ export class AuthenticationService extends EventEmitter {
             serverName,
             enabled: config.enabled !== false,
             type: config.type || 'bearer',
-            headerName: config.headerName,
-            customValidator: config.customValidator,
-            credentials: config.credentials,
+            ...(config.headerName !== undefined && { headerName: config.headerName }),
+            ...(config.customValidator !== undefined && {
+                customValidator: config.customValidator,
+            }),
+            ...(config.credentials !== undefined && { credentials: config.credentials }),
         };
 
         this.serverConfigs.set(serverName, fullConfig);
@@ -56,7 +58,15 @@ export class AuthenticationService extends EventEmitter {
     }
 
     async authenticate(serverName: string, req: IncomingMessage): Promise<AuthResult> {
-        const config = this.serverConfigs.get(serverName) || this.globalConfig;
+        let config = this.serverConfigs.get(serverName);
+
+        if (!config && this.globalConfig) {
+            // Create a ServerAuthConfig from the global config
+            config = {
+                ...this.globalConfig,
+                serverName,
+            };
+        }
 
         if (!config || !config.enabled) {
             // No authentication required
@@ -206,7 +216,7 @@ export class AuthenticationService extends EventEmitter {
 
         const keyValue = Array.isArray(apiKey) ? apiKey[0] : apiKey;
 
-        if (!config.credentials?.apiKeys?.includes(keyValue)) {
+        if (!keyValue || !config.credentials?.apiKeys?.includes(keyValue)) {
             return { success: false, error: 'Invalid API key' };
         }
 
@@ -223,7 +233,8 @@ export class AuthenticationService extends EventEmitter {
     private getClientIp(req: IncomingMessage): string {
         const forwarded = req.headers['x-forwarded-for'];
         const ip = forwarded
-            ? (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim()
+            ? (Array.isArray(forwarded) ? forwarded[0] || '' : forwarded).split(',')[0]?.trim() ||
+              'unknown'
             : req.socket.remoteAddress || 'unknown';
 
         return ip;
@@ -256,7 +267,7 @@ export class AuthenticationService extends EventEmitter {
             type: string;
             hasCredentials: boolean;
         }>;
-    } {
+        } {
         const servers = Array.from(this.serverConfigs.values()).map(config => ({
             name: config.serverName,
             enabled: config.enabled,
@@ -307,7 +318,7 @@ export class AuthenticationService extends EventEmitter {
         }
 
         return {
-            type,
+            ...(type && { type }),
             hasAuth: headerPresent.length > 0,
             headerPresent,
         };

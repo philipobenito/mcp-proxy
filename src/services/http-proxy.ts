@@ -56,11 +56,19 @@ export class HttpProxyService extends EventEmitter {
         server: DetectedServer
     ): Promise<void> {
         const startTime = Date.now();
+        // Filter out undefined headers
+        const cleanHeaders: Record<string, string | string[]> = {};
+        for (const [key, value] of Object.entries(req.headers)) {
+            if (value !== undefined) {
+                cleanHeaders[key] = value;
+            }
+        }
+
         const proxyReq: ProxyRequest = {
             serverName: server.name,
             path: req.url || '/',
             method: req.method || 'GET',
-            headers: req.headers,
+            headers: cleanHeaders,
             timestamp: new Date(),
         };
 
@@ -143,7 +151,7 @@ export class HttpProxyService extends EventEmitter {
             method: proxyReq.method,
             headers: {
                 ...proxyReq.headers,
-                host: targetUrl.host,
+                host: targetUrl.host || undefined,
             },
         };
 
