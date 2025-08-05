@@ -34,7 +34,7 @@ export class RequestRouter {
     registerServer(server: DetectedServer): void {
         const serverKey = this.config.caseSensitive ? server.name : server.name.toLowerCase();
         this.servers.set(serverKey, server);
-        
+
         this.logger.info('Registered server for routing', {
             serverName: server.name,
             type: server.detectedType,
@@ -45,7 +45,7 @@ export class RequestRouter {
     unregisterServer(serverName: string): void {
         const serverKey = this.config.caseSensitive ? serverName : serverName.toLowerCase();
         const removed = this.servers.delete(serverKey);
-        
+
         if (removed) {
             this.logger.info('Unregistered server from routing', { serverName });
         }
@@ -57,7 +57,7 @@ export class RequestRouter {
 
         // Route based on URL path
         const routeMatch = this.matchRoute(pathSegments, url.pathname || '/');
-        
+
         if (!routeMatch) {
             this.logger.debug('No route match found', {
                 path: url.pathname,
@@ -88,7 +88,7 @@ export class RequestRouter {
                 path: routeMatch.path,
                 method: req.method,
             });
-            
+
             // Let the proxy service handle the error response
             throw error;
         }
@@ -165,7 +165,7 @@ export class RequestRouter {
     private extractParams(pathSegments: string[]): Record<string, string> {
         // Extract parameters from path segments
         const params: Record<string, string> = {};
-        
+
         // For now, just include the server name
         if (pathSegments.length > 0) {
             params.server = pathSegments[0];
@@ -193,7 +193,7 @@ export class RequestRouter {
             protocol: string;
             pattern: string;
         }>;
-    } {
+        } {
         const routes = Array.from(this.servers.values()).map(server => ({
             name: server.name,
             type: server.detectedType,

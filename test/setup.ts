@@ -3,11 +3,21 @@ import { initialiseLogger } from '../src/utils/index.js';
 
 // Set up test environment
 beforeAll(() => {
-    // Initialise logger with test configuration (silent by default)
+    // Determine log level based on environment variables
+    let logLevel = 'fatal';
+
+    if (process.env.TEST_VERBOSE === 'true' || process.env.VITEST_VERBOSE === 'true') {
+        logLevel = 'debug';
+    } else if (process.env.TEST_LOG_LEVEL) {
+        logLevel = process.env.TEST_LOG_LEVEL;
+    }
+
+    // Initialise logger with test configuration (fatal level to suppress most logs)
     initialiseLogger({
-        level: process.env.TEST_LOG_LEVEL === 'debug' ? 'debug' : 'error',
-        format: 'pretty',
-        output: 'stdout',
+        level: logLevel,
+        format: logLevel === 'fatal' ? 'json' : 'pretty',
+        output: logLevel === 'fatal' ? 'file' : 'stdout',
+        file: logLevel === 'fatal' ? '/dev/null' : undefined,
     });
 
     // Set test environment variables

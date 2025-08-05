@@ -1,6 +1,9 @@
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { parse as parseUrl } from 'url';
-import { ConfigLoader, ConfigurationError, type Config } from './config/index.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { ConfigLoader, type Config } from './config/index.js';
 import {
     type DetectedServer,
     PortManager,
@@ -29,11 +32,11 @@ export interface ProxyApplicationConfig {
 export class ProxyApplication {
     private readonly config: ProxyApplicationConfig;
     private readonly logger = getLogger({ component: 'proxy-application' });
-    
+
     private server?: Server;
     private appConfig?: Config;
     private detectedServers: DetectedServer[] = [];
-    
+
     // Core services
     private portManager!: PortManager;
     private processManager!: ProcessManager;
@@ -143,7 +146,7 @@ export class ProxyApplication {
     private async loadConfiguration(): Promise<void> {
         const configLoader = new ConfigLoader();
         const result = await configLoader.loadConfigurationWithDetection();
-        
+
         this.appConfig = result.config;
         this.detectedServers = result.detectedServers;
 
@@ -198,7 +201,7 @@ export class ProxyApplication {
         // Rate limiter (if enabled)
         if (this.config.enableRateLimit) {
             this.rateLimiter = new RateLimiterService();
-            
+
             // Configure default rate limits
             for (const server of this.detectedServers) {
                 this.rateLimiter.configureServerLimits(server.name, {
@@ -232,18 +235,14 @@ export class ProxyApplication {
 
         // WebSocket support
         if (this.config.enableWebSocket) {
-            this.websocketProxy = new WebSocketProxyService(
-                this.server,
-                this.portManager,
-                {
-                    pingInterval: 30000,
-                    connectionTimeout: 60000,
-                    maxConnections: 1000,
-                }
-            );
+            this.websocketProxy = new WebSocketProxyService(this.server, this.portManager, {
+                pingInterval: 30000,
+                connectionTimeout: 60000,
+                maxConnections: 1000,
+            });
         }
 
-        this.server.on('error', (error) => {
+        this.server.on('error', error => {
             this.logger.error('HTTP server error', error);
         });
     }
@@ -290,7 +289,6 @@ export class ProxyApplication {
 
     private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
         const url = parseUrl(req.url || '/', true);
-        const startTime = Date.now();
 
         // Add CORS headers if enabled
         if (this.config.enableCors) {
@@ -324,8 +322,8 @@ export class ProxyApplication {
     }
 
     private async handleBuiltinEndpoints(
-        req: IncomingMessage, 
-        res: ServerResponse, 
+        req: IncomingMessage,
+        res: ServerResponse,
         pathname: string
     ): Promise<boolean> {
         switch (pathname) {
@@ -387,7 +385,7 @@ export class ProxyApplication {
     private handleHealthEndpoint(res: ServerResponse): void {
         const runningProcesses = this.processManager.getRunningProcesses();
         const failedProcesses = this.processManager.getFailedProcesses();
-        
+
         const health = {
             status: failedProcesses.length === 0 ? 'healthy' : 'degraded',
             timestamp: new Date().toISOString(),
@@ -408,7 +406,7 @@ export class ProxyApplication {
         const servers = this.detectedServers.map(server => {
             const processInfo = this.processManager.getProcessInfo(server.name);
             const allocatedPort = this.portManager.getPortForServer(server.name);
-            
+
             return {
                 name: server.name,
                 type: server.detectedType,
@@ -484,8 +482,8 @@ export class ProxyApplication {
     }
 
     private sendErrorResponse(
-        res: ServerResponse, 
-        statusCode: number, 
+        res: ServerResponse,
+        statusCode: number,
         message: string,
         details?: unknown
     ): void {
@@ -525,7 +523,10 @@ export class ProxyApplication {
 
     private getVersion(): string {
         try {
-            const packageJson = require('../package.json');
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = dirname(__filename);
+            const packageJsonPath = join(__dirname, '../package.json');
+            const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
             return packageJson.version || 'unknown';
         } catch {
             return 'unknown';

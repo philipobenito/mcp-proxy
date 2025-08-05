@@ -33,7 +33,7 @@ export class RateLimiterService extends EventEmitter {
 
     constructor() {
         super();
-        
+
         // Clean up expired records every minute
         this.cleanupInterval = setInterval(() => {
             this.cleanupExpiredRecords();
@@ -52,7 +52,7 @@ export class RateLimiterService extends EventEmitter {
         };
 
         this.configs.set(serverName, fullConfig);
-        
+
         this.logger.info('Configured rate limits for server', {
             serverName,
             windowMs: fullConfig.windowMs,
@@ -80,9 +80,9 @@ export class RateLimiterService extends EventEmitter {
 
         const key = this.generateKey(serverName, req, config);
         const now = Date.now();
-        
+
         let record = this.store.get(key);
-        
+
         if (!record || now > record.resetTime) {
             // Create new record or reset expired one
             record = {
@@ -97,7 +97,7 @@ export class RateLimiterService extends EventEmitter {
 
         const remaining = Math.max(0, config.maxRequests - record.count);
         const allowed = record.count <= config.maxRequests;
-        
+
         const info: RateLimitInfo = {
             limit: config.maxRequests,
             remaining,
@@ -132,8 +132,7 @@ export class RateLimiterService extends EventEmitter {
         }
 
         // Skip recording based on configuration
-        if ((success && config.skipSuccessfulRequests) || 
-            (!success && config.skipFailedRequests)) {
+        if ((success && config.skipSuccessfulRequests) || (!success && config.skipFailedRequests)) {
             return;
         }
 
@@ -149,7 +148,7 @@ export class RateLimiterService extends EventEmitter {
 
         const key = this.generateKey(serverName, req, config);
         const record = this.store.get(key);
-        
+
         if (!record) {
             return {
                 limit: config.maxRequests,
@@ -160,7 +159,7 @@ export class RateLimiterService extends EventEmitter {
         }
 
         const remaining = Math.max(0, config.maxRequests - record.count);
-        
+
         return {
             limit: config.maxRequests,
             remaining,
@@ -180,7 +179,7 @@ export class RateLimiterService extends EventEmitter {
     resetServer(serverName: string): void {
         // Remove all records for this server
         const keysToDelete: string[] = [];
-        
+
         for (const [key] of this.store) {
             if (key.startsWith(`${serverName}:`)) {
                 keysToDelete.push(key);
@@ -207,7 +206,7 @@ export class RateLimiterService extends EventEmitter {
             config: RateLimitConfig;
             activeRecords: number;
         }>;
-    } {
+        } {
         const servers: Array<{
             name: string;
             config: RateLimitConfig;
@@ -215,9 +214,9 @@ export class RateLimiterService extends EventEmitter {
         }> = [];
 
         for (const [serverName, config] of this.configs) {
-            const activeRecords = Array.from(this.store.keys())
-                .filter(key => key.startsWith(`${serverName}:`))
-                .length;
+            const activeRecords = Array.from(this.store.keys()).filter(key =>
+                key.startsWith(`${serverName}:`)
+            ).length;
 
             servers.push({
                 name: serverName,
@@ -241,16 +240,21 @@ export class RateLimiterService extends EventEmitter {
     private defaultKeyGenerator(req: IncomingMessage): string {
         // Use IP as default identifier
         const forwarded = req.headers['x-forwarded-for'];
-        const ip = forwarded 
+        const ip = forwarded
             ? (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim()
             : req.socket.remoteAddress || 'unknown';
-        
+
         return ip;
     }
 
     private sanitiseKey(key: string): string {
         // Remove potential sensitive information for logging
-        return key.replace(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/, 'xxx.xxx.xxx.xxx');
+        return key
+            .replace(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/, 'xxx.xxx.xxx.xxx')
+            .replace(
+                /([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}/gi,
+                'xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx'
+            );
     }
 
     private cleanupExpiredRecords(): void {

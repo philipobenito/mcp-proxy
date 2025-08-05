@@ -268,8 +268,7 @@ export class HttpProxyService extends EventEmitter {
             this.stats.averageResponseTime = duration;
         } else {
             this.stats.averageResponseTime =
-                (this.stats.averageResponseTime * (totalRequests - 1) + duration) /
-                totalRequests;
+                (this.stats.averageResponseTime * (totalRequests - 1) + duration) / totalRequests;
         }
     }
 

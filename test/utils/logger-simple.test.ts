@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getLogger, createServerLogger, initialiseLogger } from '../../src/utils/logger.js';
+import { getLogger, createServerLogger, initialiseLogger, Logger } from '../../src/utils/logger.js';
 import type { LoggingConfig } from '../../src/config/schema.js';
 
 describe('Logger Utility Functions', () => {
@@ -55,25 +55,34 @@ describe('Logger Utility Functions', () => {
 
     describe('logger methods coverage', () => {
         it('should call logger utility methods without errors', () => {
-            const logger = getLogger();
+            // Create a test logger that captures output instead of using global logger
+            const testLogger = new Logger({
+                level: 'debug',
+                output: 'file',
+                file: '/dev/null', // Capture output to null device to avoid test noise
+            });
 
             // Test all utility methods exist and can be called
-            expect(() => logger.configLoaded(5, 'test.json')).not.toThrow();
-            expect(() => logger.configError(new Error('test'))).not.toThrow();
-            expect(() => logger.serverStarting('test', 'cmd', 3001)).not.toThrow();
-            expect(() => logger.serverStarted('test', 3001, 1234)).not.toThrow();
-            expect(() => logger.serverFailed('test', new Error('fail'), 3001)).not.toThrow();
-            expect(() => logger.serverStopped('test', 3001, 'SIGTERM')).not.toThrow();
-            expect(() => logger.portAllocated('test', 3001)).not.toThrow();
-            expect(() => logger.portAllocationFailed('test', new Error('fail'))).not.toThrow();
-            expect(() => logger.appStarting(3000, 'localhost')).not.toThrow();
-            expect(() => logger.appStarted(3000, 'localhost')).not.toThrow();
-            expect(() => logger.appShutdown('SIGTERM')).not.toThrow();
+            expect(() => testLogger.configLoaded(5, 'test.json')).not.toThrow();
+            expect(() => testLogger.configError(new Error('test'))).not.toThrow();
+            expect(() => testLogger.serverStarting('test', 'cmd', 3001)).not.toThrow();
+            expect(() => testLogger.serverStarted('test', 3001, 1234)).not.toThrow();
+            expect(() => testLogger.serverFailed('test', new Error('fail'), 3001)).not.toThrow();
+            expect(() => testLogger.serverStopped('test', 3001, 'SIGTERM')).not.toThrow();
+            expect(() => testLogger.portAllocated('test', 3001)).not.toThrow();
+            expect(() => testLogger.portAllocationFailed('test', new Error('fail'))).not.toThrow();
+            expect(() => testLogger.appStarting(3000, 'localhost')).not.toThrow();
+            expect(() => testLogger.appStarted(3000, 'localhost')).not.toThrow();
+            expect(() => testLogger.appShutdown('SIGTERM')).not.toThrow();
         });
 
         it('should handle child logger creation', () => {
-            const logger = getLogger();
-            const child = logger.child({ test: 'context' });
+            const testLogger = new Logger({
+                level: 'debug',
+                output: 'file',
+                file: '/dev/null',
+            });
+            const child = testLogger.child({ test: 'context' });
             expect(child).toBeDefined();
             expect(typeof child.info).toBe('function');
         });
@@ -81,14 +90,18 @@ describe('Logger Utility Functions', () => {
 
     describe('error handling', () => {
         it('should handle errors in logging gracefully', () => {
-            const logger = getLogger();
+            const testLogger = new Logger({
+                level: 'debug',
+                output: 'file',
+                file: '/dev/null',
+            });
 
             // These should not throw even with various error types
-            expect(() => logger.error('test', new Error('test error'))).not.toThrow();
-            expect(() => logger.error('test', { custom: 'error' })).not.toThrow();
-            expect(() => logger.error('test', 'string error')).not.toThrow();
-            expect(() => logger.error('test', null)).not.toThrow();
-            expect(() => logger.error('test', undefined)).not.toThrow();
+            expect(() => testLogger.error('test', new Error('test error'))).not.toThrow();
+            expect(() => testLogger.error('test', { custom: 'error' })).not.toThrow();
+            expect(() => testLogger.error('test', 'string error')).not.toThrow();
+            expect(() => testLogger.error('test', null)).not.toThrow();
+            expect(() => testLogger.error('test', undefined)).not.toThrow();
         });
     });
 });

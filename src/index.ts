@@ -33,7 +33,7 @@ async function main() {
     // Graceful shutdown handlers
     const shutdown = async (signal: string) => {
         logger.info(`Received ${signal}, shutting down gracefully`);
-        
+
         try {
             await app.stop();
             logger.info('MCP Proxy stopped successfully');
@@ -48,7 +48,7 @@ async function main() {
     process.on('SIGINT', () => shutdown('SIGINT'));
 
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', error => {
         logger.error('Uncaught exception', error);
         process.exit(1);
     });
@@ -60,7 +60,7 @@ async function main() {
 }
 
 // Start the application
-main().catch((error) => {
+main().catch(error => {
     logger.error('Failed to start application', error);
     process.exit(1);
 });

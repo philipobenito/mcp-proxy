@@ -47,7 +47,7 @@ export class AuthenticationService extends EventEmitter {
         };
 
         this.serverConfigs.set(serverName, fullConfig);
-        
+
         this.logger.info('Configured authentication for server', {
             serverName,
             enabled: fullConfig.enabled,
@@ -57,7 +57,7 @@ export class AuthenticationService extends EventEmitter {
 
     async authenticate(serverName: string, req: IncomingMessage): Promise<AuthResult> {
         const config = this.serverConfigs.get(serverName) || this.globalConfig;
-        
+
         if (!config || !config.enabled) {
             // No authentication required
             return { success: true };
@@ -70,15 +70,15 @@ export class AuthenticationService extends EventEmitter {
                 case 'bearer':
                     result = await this.authenticateBearer(req, config);
                     break;
-                
+
                 case 'basic':
                     result = await this.authenticateBasic(req, config);
                     break;
-                
+
                 case 'api-key':
                     result = await this.authenticateApiKey(req, config);
                     break;
-                
+
                 case 'custom':
                     if (config.customValidator) {
                         result = await config.customValidator(req);
@@ -86,7 +86,7 @@ export class AuthenticationService extends EventEmitter {
                         result = { success: false, error: 'No custom validator configured' };
                     }
                     break;
-                
+
                 default:
                     result = { success: false, error: `Unsupported auth type: ${config.type}` };
             }
@@ -129,15 +129,18 @@ export class AuthenticationService extends EventEmitter {
         }
     }
 
-    private async authenticateBearer(req: IncomingMessage, config: ServerAuthConfig): Promise<AuthResult> {
+    private async authenticateBearer(
+        req: IncomingMessage,
+        config: ServerAuthConfig
+    ): Promise<AuthResult> {
         const authHeader = req.headers.authorization;
-        
+
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return { success: false, error: 'Missing or invalid Authorization header' };
         }
 
         const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-        
+
         if (!config.credentials?.tokens?.includes(token)) {
             return { success: false, error: 'Invalid token' };
         }
@@ -149,22 +152,31 @@ export class AuthenticationService extends EventEmitter {
         };
     }
 
-    private async authenticateBasic(req: IncomingMessage, config: ServerAuthConfig): Promise<AuthResult> {
+    private async authenticateBasic(
+        req: IncomingMessage,
+        config: ServerAuthConfig
+    ): Promise<AuthResult> {
         const authHeader = req.headers.authorization;
-        
+
         if (!authHeader || !authHeader.startsWith('Basic ')) {
             return { success: false, error: 'Missing or invalid Authorization header' };
         }
 
         let credentials: string;
         try {
-            credentials = Buffer.from(authHeader.substring(6), 'base64').toString('utf8');
+            const buffer = Buffer.from(authHeader.substring(6), 'base64');
+            credentials = buffer.toString('utf8');
+
+            // Validate UTF-8 encoding by checking if re-encoding produces the same buffer
+            if (!Buffer.from(credentials, 'utf8').equals(buffer)) {
+                return { success: false, error: 'Invalid UTF-8 encoding in credentials' };
+            }
         } catch {
             return { success: false, error: 'Invalid base64 encoding' };
         }
 
         const [username, password] = credentials.split(':', 2);
-        
+
         if (!username || !password) {
             return { success: false, error: 'Invalid credentials format' };
         }
@@ -181,16 +193,19 @@ export class AuthenticationService extends EventEmitter {
         };
     }
 
-    private async authenticateApiKey(req: IncomingMessage, config: ServerAuthConfig): Promise<AuthResult> {
+    private async authenticateApiKey(
+        req: IncomingMessage,
+        config: ServerAuthConfig
+    ): Promise<AuthResult> {
         const headerName = config.headerName || 'x-api-key';
         const apiKey = req.headers[headerName.toLowerCase()];
-        
+
         if (!apiKey) {
             return { success: false, error: `Missing ${headerName} header` };
         }
 
         const keyValue = Array.isArray(apiKey) ? apiKey[0] : apiKey;
-        
+
         if (!config.credentials?.apiKeys?.includes(keyValue)) {
             return { success: false, error: 'Invalid API key' };
         }
@@ -198,7 +213,7 @@ export class AuthenticationService extends EventEmitter {
         return {
             success: true,
             user: `api-key-user-${keyValue.substring(0, 8)}`,
-            metadata: { 
+            metadata: {
                 keyPrefix: keyValue.substring(0, 8),
                 headerUsed: headerName,
             },
@@ -207,10 +222,10 @@ export class AuthenticationService extends EventEmitter {
 
     private getClientIp(req: IncomingMessage): string {
         const forwarded = req.headers['x-forwarded-for'];
-        const ip = forwarded 
+        const ip = forwarded
             ? (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim()
             : req.socket.remoteAddress || 'unknown';
-        
+
         return ip;
     }
 
@@ -241,7 +256,7 @@ export class AuthenticationService extends EventEmitter {
             type: string;
             hasCredentials: boolean;
         }>;
-    } {
+        } {
         const servers = Array.from(this.serverConfigs.values()).map(config => ({
             name: config.serverName,
             enabled: config.enabled,
@@ -259,9 +274,7 @@ export class AuthenticationService extends EventEmitter {
     // Helper method to check if a request has authentication headers
     hasAuthHeaders(req: IncomingMessage): boolean {
         return Boolean(
-            req.headers.authorization ||
-            req.headers['x-api-key'] ||
-            req.headers['x-auth-token']
+            req.headers.authorization || req.headers['x-api-key'] || req.headers['x-auth-token']
         );
     }
 

@@ -21,44 +21,59 @@ export class Logger {
         if (loggerInstance) {
             logger = loggerInstance;
         } else {
-            const loggerConfig: pino.LoggerOptions = {
-                level: config.level || 'info',
-                formatters: {
-                    level: label => ({ level: label }),
-                },
-                timestamp: pino.stdTimeFunctions.isoTime,
-                base: {
-                    pid: process.pid,
-                    hostname: process.env.HOSTNAME || 'localhost',
-                    service: 'mcp-proxy',
-                    version: this.getVersion(),
-                },
-            };
+            const logLevel = config.level || 'info';
 
-            // Configure transport based on format and output
-            if (config.format === 'pretty' || process.env.NODE_ENV === 'development') {
-                loggerConfig.transport = {
-                    target: 'pino-pretty',
-                    options: {
-                        colorise: true,
-                        translateTime: 'SYS:standard',
-                        ignore: 'pid,hostname',
-                        messageFormat: '{component} [{serverName}:{port}] {msg}',
+            // If silent mode, create a no-op logger
+            if (logLevel === 'silent') {
+                logger = pino({
+                    level: 'fatal',
+                    transport: {
+                        target: 'pino/file',
+                        options: {
+                            destination: '/dev/null',
+                        },
+                    },
+                });
+            } else {
+                const loggerConfig: pino.LoggerOptions = {
+                    level: logLevel,
+                    formatters: {
+                        level: label => ({ level: label }),
+                    },
+                    timestamp: pino.stdTimeFunctions.isoTime,
+                    base: {
+                        pid: process.pid,
+                        hostname: process.env.HOSTNAME || 'localhost',
+                        service: 'mcp-proxy',
+                        version: this.getVersion(),
                     },
                 };
-            }
 
-            // Handle file output
-            if (config.output === 'file' && config.file) {
-                loggerConfig.transport = {
-                    target: 'pino/file',
-                    options: {
-                        destination: config.file,
-                    },
-                };
-            }
+                // Configure transport based on format and output
+                if (config.format === 'pretty' || process.env.NODE_ENV === 'development') {
+                    loggerConfig.transport = {
+                        target: 'pino-pretty',
+                        options: {
+                            colorise: true,
+                            translateTime: 'SYS:standard',
+                            ignore: 'pid,hostname',
+                            messageFormat: '{component} [{serverName}:{port}] {msg}',
+                        },
+                    };
+                }
 
-            logger = pino(loggerConfig);
+                // Handle file output
+                if (config.output === 'file' && config.file) {
+                    loggerConfig.transport = {
+                        target: 'pino/file',
+                        options: {
+                            destination: config.file,
+                        },
+                    };
+                }
+
+                logger = pino(loggerConfig);
+            }
         }
         this.logger = logger;
         this.context = context;

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { IncomingMessage } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
-import { type DetectedServer, ServerType } from './detection.js';
+// Types are imported but not used in current implementation
 import { type PortManager } from './port-manager.js';
 import { getLogger } from '../utils/index.js';
 
@@ -32,7 +32,7 @@ export class WebSocketProxyService extends EventEmitter {
     private heartbeatInterval?: NodeJS.Timeout;
 
     constructor(
-        server: any, // HTTP server instance
+        server: import('http').Server, // HTTP server instance
         portManager: PortManager,
         config: Partial<WebSocketProxyConfig> = {}
     ) {
@@ -85,7 +85,7 @@ export class WebSocketProxyService extends EventEmitter {
         // Parse server name from URL path
         const url = new URL(req.url || '', `http://${req.headers.host}`);
         const pathSegments = url.pathname.split('/').filter(Boolean);
-        
+
         // Expected format: /ws/server-name
         if (pathSegments.length < 2 || pathSegments[0] !== 'ws') {
             this.logger.warn('Invalid WebSocket path', { path: url.pathname });
@@ -126,7 +126,7 @@ export class WebSocketProxyService extends EventEmitter {
                 connectionId,
                 serverName,
             });
-            
+
             this.closeConnection(connectionId, 1011, 'Failed to connect to server');
         }
     }
@@ -168,22 +168,27 @@ export class WebSocketProxyService extends EventEmitter {
 
         // Create WebSocket connection to server
         const targetUrl = `ws://localhost:${port}/ws`;
-        
+
         return new Promise((resolve, reject) => {
             const targetWs = new WebSocket(targetUrl);
-            
-            const timeout = setTimeout(() => {
+            let timeoutRef: NodeJS.Timeout | null = null;
+
+            timeoutRef = setTimeout(() => {
                 targetWs.close();
+                timeoutRef = null;
                 reject(new Error('Connection timeout'));
             }, this.config.connectionTimeout);
 
             targetWs.on('open', () => {
-                clearTimeout(timeout);
+                if (timeoutRef) {
+                    clearTimeout(timeoutRef);
+                    timeoutRef = null;
+                }
                 connection.targetWs = targetWs;
                 connection.connected = true;
 
                 this.setupTargetWebSocket(connection);
-                
+
                 this.logger.info('Connected to target server', {
                     connectionId: connection.id,
                     serverName: connection.serverName,
@@ -194,7 +199,10 @@ export class WebSocketProxyService extends EventEmitter {
             });
 
             targetWs.on('error', (error: Error) => {
-                clearTimeout(timeout);
+                if (timeoutRef) {
+                    clearTimeout(timeoutRef);
+                    timeoutRef = null;
+                }
                 this.logger.error('Target WebSocket connection error', error, {
                     connectionId: connection.id,
                     serverName: connection.serverName,
@@ -206,7 +214,7 @@ export class WebSocketProxyService extends EventEmitter {
 
     private setupTargetWebSocket(connection: WebSocketConnection): void {
         const { targetWs, id } = connection;
-        
+
         if (!targetWs) {
             return;
         }
@@ -241,7 +249,7 @@ export class WebSocketProxyService extends EventEmitter {
         // Forward message to server
         if (connection.targetWs && connection.targetWs.readyState === WebSocket.OPEN) {
             connection.targetWs.send(data);
-            
+
             this.emit('messageForwarded', {
                 connectionId,
                 direction: 'client-to-server',
@@ -261,7 +269,7 @@ export class WebSocketProxyService extends EventEmitter {
         // Forward message to client
         if (connection.clientWs.readyState === WebSocket.OPEN) {
             connection.clientWs.send(data);
-            
+
             this.emit('messageForwarded', {
                 connectionId,
                 direction: 'server-to-client',
@@ -304,10 +312,10 @@ export class WebSocketProxyService extends EventEmitter {
 
         this.heartbeatInterval = setInterval(() => {
             const now = Date.now();
-            
+
             for (const [connectionId, connection] of this.connections) {
                 const timeSinceActivity = now - connection.lastActivity.getTime();
-                
+
                 if (timeSinceActivity > this.config.connectionTimeout) {
                     this.logger.warn('WebSocket connection timeout', {
                         connectionId,
@@ -330,10 +338,10 @@ export class WebSocketProxyService extends EventEmitter {
 
     private getClientIp(req: IncomingMessage): string {
         const forwarded = req.headers['x-forwarded-for'];
-        const ip = forwarded 
+        const ip = forwarded
             ? (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim()
             : req.socket.remoteAddress || 'unknown';
-        
+
         return ip;
     }
 
@@ -342,8 +350,7 @@ export class WebSocketProxyService extends EventEmitter {
     }
 
     getConnectionsByServer(serverName: string): WebSocketConnection[] {
-        return Array.from(this.connections.values())
-            .filter(conn => conn.serverName === serverName);
+        return Array.from(this.connections.values()).filter(conn => conn.serverName === serverName);
     }
 
     getConnectionCount(): number {
@@ -354,11 +361,11 @@ export class WebSocketProxyService extends EventEmitter {
         totalConnections: number;
         activeConnections: number;
         connectionsByServer: Record<string, number>;
-    } {
+        } {
         const connectionsByServer: Record<string, number> = {};
-        
+
         for (const connection of this.connections.values()) {
-            connectionsByServer[connection.serverName] = 
+            connectionsByServer[connection.serverName] =
                 (connectionsByServer[connection.serverName] || 0) + 1;
         }
 
@@ -377,11 +384,12 @@ export class WebSocketProxyService extends EventEmitter {
         }
 
         // Close all connections
-        const closePromises = Array.from(this.connections.keys()).map(id =>
-            new Promise<void>(resolve => {
-                this.closeConnection(id, 1001, 'Server shutdown');
-                resolve();
-            })
+        const closePromises = Array.from(this.connections.keys()).map(
+            id =>
+                new Promise<void>(resolve => {
+                    this.closeConnection(id, 1001, 'Server shutdown');
+                    resolve();
+                })
         );
 
         await Promise.all(closePromises);

@@ -226,7 +226,7 @@ export class PortManager {
         total: number;
         allocated: number;
         available: number;
-    } {
+        } {
         const total = this.config.endPort - this.config.startPort + 1;
         const allocated = this.allocations.size;
 
