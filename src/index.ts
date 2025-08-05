@@ -13,8 +13,6 @@ async function main() {
         enableCors: process.env.ENABLE_CORS !== 'false',
         enableMetrics: process.env.ENABLE_METRICS !== 'false',
         enableAuth: process.env.ENABLE_AUTH === 'true',
-        enableRateLimit: process.env.ENABLE_RATE_LIMIT === 'true',
-        enableWebSocket: process.env.ENABLE_WEBSOCKET !== 'false',
     });
 
     try {

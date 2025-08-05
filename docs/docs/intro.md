@@ -41,15 +41,17 @@ The MCP Proxy acts as a front controller that automatically discovers, configure
 
 ## Key Features
 
-- **Zero-Config Discovery**: Automatically discovers any server in `./servers/` directory
+- **Zero-Config Discovery**: Automatically discovers servers in `servers.json` and `./servers/` directory
 - **Multi-Protocol Support**: Supports both HTTP and stdio MCP servers seamlessly
-- **Dynamic Port Assignment**: Auto-assigns random ports (3001-3099) to discovered servers
+- **Dynamic Port Assignment**: Auto-assigns ports (3001-3099) to discovered servers
 - **Stdio-to-HTTP Bridge**: Automatically wraps stdio servers for network access
-- **Unified Routing**: Clean URL paths (`mcp.example.com/servername`) route to appropriate servers
-- **Credential Isolation**: Each server manages its own credentials independently
-- **Health Monitoring**: Monitors server health and handles failures gracefully
-- **Development Mode**: Hot-reload capabilities for development
-- **Production Ready**: Process management and logging for production deployment
+- **Unified Routing**: Clean URL paths (`localhost:3000/servername`) route to appropriate servers
+- **Process Management**: Automatic server process lifecycle management with restart capabilities
+- **Health Monitoring**: Real-time health checks and process monitoring
+- **Authentication Support**: Optional multi-method authentication (Bearer, Basic, API Key)
+- **CORS Support**: Built-in CORS handling for web applications
+- **Metrics & Statistics**: Detailed metrics and performance monitoring
+- **Production Ready**: Comprehensive logging, error handling, and graceful shutdown
 
 ## Modern Technology Stack
 
@@ -74,8 +76,8 @@ This project leverages bleeding-edge technologies for optimal performance and de
 
 - **Docker Compose V2**: Modern container orchestration
 - **Multi-stage Docker builds**: Optimised production images
-- **HTTP/2 Support**: Modern protocol with multiplexing and server push
-- **WebSocket Health Checks**: Real-time monitoring capabilities
+- **HTTP/1.1 Support**: Reliable protocol with connection management
+- **Process Health Monitoring**: Real-time server process monitoring
 - **Structured JSON Logging**: Machine-readable logs for observability
 
 ### Code Quality

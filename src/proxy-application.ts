@@ -11,9 +11,7 @@ import {
     HttpProxyService,
     StdioHttpAdapter,
     RequestRouter,
-    RateLimiterService,
     AuthenticationService,
-    WebSocketProxyService,
 } from './services/index.js';
 import { initialiseLogger, getLogger } from './utils/index.js';
 
@@ -25,8 +23,6 @@ export interface ProxyApplicationConfig {
     enableCors: boolean;
     enableMetrics: boolean;
     enableAuth: boolean;
-    enableRateLimit: boolean;
-    enableWebSocket: boolean;
 }
 
 export class ProxyApplication {
@@ -43,9 +39,7 @@ export class ProxyApplication {
     private stdioAdapter!: StdioHttpAdapter;
     private httpProxy!: HttpProxyService;
     private requestRouter!: RequestRouter;
-    private rateLimiter!: RateLimiterService;
     private authService!: AuthenticationService;
-    private websocketProxy?: WebSocketProxyService;
 
     constructor(config: Partial<ProxyApplicationConfig> = {}) {
         this.config = {
@@ -56,8 +50,6 @@ export class ProxyApplication {
             enableCors: config.enableCors !== false,
             enableMetrics: config.enableMetrics !== false,
             enableAuth: config.enableAuth || false,
-            enableRateLimit: config.enableRateLimit || false,
-            enableWebSocket: config.enableWebSocket !== false,
         };
     }
 
@@ -111,11 +103,6 @@ export class ProxyApplication {
         this.logger.info('Stopping MCP Proxy Application');
 
         try {
-            // Stop WebSocket proxy
-            if (this.websocketProxy) {
-                await this.websocketProxy.shutdown();
-            }
-
             // Stop stdio adapters
             if (this.stdioAdapter) {
                 await this.stdioAdapter.stopAllAdapters();
@@ -198,19 +185,6 @@ export class ProxyApplication {
             enableWildcards: true,
         });
 
-        // Rate limiter (if enabled)
-        if (this.config.enableRateLimit) {
-            this.rateLimiter = new RateLimiterService();
-
-            // Configure default rate limits
-            for (const server of this.detectedServers) {
-                this.rateLimiter.configureServerLimits(server.name, {
-                    windowMs: 60000, // 1 minute
-                    maxRequests: 100, // 100 requests per minute per IP
-                });
-            }
-        }
-
         // Authentication service (if enabled)
         if (this.config.enableAuth) {
             this.authService = new AuthenticationService();
@@ -218,8 +192,6 @@ export class ProxyApplication {
 
         this.logger.info('Services initialised', {
             enableAuth: this.config.enableAuth,
-            enableRateLimit: this.config.enableRateLimit,
-            enableWebSocket: this.config.enableWebSocket,
         });
     }
 
@@ -232,15 +204,6 @@ export class ProxyApplication {
                 this.sendErrorResponse(res, 500, 'Internal Server Error');
             }
         });
-
-        // WebSocket support
-        if (this.config.enableWebSocket) {
-            this.websocketProxy = new WebSocketProxyService(this.server, this.portManager, {
-                pingInterval: 30000,
-                connectionTimeout: 60000,
-                maxConnections: 1000,
-            });
-        }
 
         this.server.on('error', error => {
             this.logger.error('HTTP server error', error);
@@ -374,8 +337,6 @@ export class ProxyApplication {
                 cors: this.config.enableCors,
                 metrics: this.config.enableMetrics,
                 auth: this.config.enableAuth,
-                rateLimit: this.config.enableRateLimit,
-                webSocket: this.config.enableWebSocket,
             },
         };
 
@@ -451,9 +412,7 @@ export class ProxyApplication {
                 failed: this.processManager.getFailedProcesses().length,
             },
             ports: this.portManager.getPortRangeInfo(),
-            rateLimiting: this.config.enableRateLimit ? this.rateLimiter.getStats() : null,
             auth: this.config.enableAuth ? this.authService.getStats() : null,
-            websocket: this.config.enableWebSocket ? this.websocketProxy?.getStats() : null,
             timestamp: new Date().toISOString(),
         };
 
@@ -468,7 +427,6 @@ export class ProxyApplication {
                 version: this.getVersion(),
             },
             servers: this.detectedServers.length,
-            activeConnections: this.websocketProxy?.getConnectionCount() || 0,
             timestamp: new Date().toISOString(),
         };
 
@@ -514,10 +472,6 @@ export class ProxyApplication {
             endpoints.metrics = '/metrics';
         }
 
-        if (this.config.enableWebSocket) {
-            endpoints.websocket = '/ws/{server-name}';
-        }
-
         return endpoints;
     }
 
@@ -534,10 +488,6 @@ export class ProxyApplication {
     }
 
     private cleanup(): void {
-        if (this.rateLimiter) {
-            this.rateLimiter.cleanup();
-        }
-
         if (this.authService) {
             this.authService.cleanup();
         }

@@ -4,6 +4,4 @@ export * from './process-manager.js';
 export * from './http-proxy.js';
 export * from './stdio-adapter.js';
 export * from './request-router.js';
-export * from './rate-limiter.js';
 export * from './auth-service.js';
-export * from './websocket-proxy.js';
