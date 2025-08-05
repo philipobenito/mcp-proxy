@@ -75,11 +75,12 @@ describe('ProxyApplication Integration', () => {
         });
 
         it('should handle health endpoint requests', async () => {
-            // Initialize the app so services are available
+            // Ensure services are initialised even if config loading fails
             try {
                 await app.initialise();
             } catch (error) {
-                // Config loading might fail in test, but services will be initialized
+                // If full initialisation fails, at least initialise core services
+                app['initialiseServices']();
             }
 
             const mockRes = {
@@ -115,10 +116,12 @@ describe('ProxyApplication Integration', () => {
         });
 
         it('should handle ports endpoint requests', async () => {
+            // Ensure services are initialised even if config loading fails
             try {
                 await app.initialise();
             } catch (error) {
-                // Config loading might fail in test, but services will be initialized
+                // If full initialisation fails, at least initialise core services
+                app['initialiseServices']();
             }
 
             const mockRes = {
@@ -151,10 +154,12 @@ describe('ProxyApplication Integration', () => {
         });
 
         it('should handle metrics endpoint when enabled', async () => {
+            // Ensure services are initialised even if config loading fails
             try {
                 await app.initialise();
             } catch (error) {
-                // Config loading might fail in test, but services will be initialized
+                // If full initialisation fails, at least initialise core services
+                app['initialiseServices']();
             }
 
             const mockRes = {
