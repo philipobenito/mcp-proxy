@@ -57,8 +57,10 @@ async function main() {
     });
 }
 
-// Start the application
-main().catch(error => {
-    logger.error('Failed to start application', error);
-    process.exit(1);
-});
+// Only start the application if this module is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+    main().catch(error => {
+        logger.error('Failed to start application', error);
+        process.exit(1);
+    });
+}
