@@ -344,6 +344,13 @@ export class ProxyApplication {
     }
 
     private handleHealthEndpoint(res: ServerResponse): void {
+        if (!this.processManager) {
+            this.sendErrorResponse(res, 503, 'Service Unavailable', {
+                error: 'Services not initialised',
+            });
+            return;
+        }
+
         const runningProcesses = this.processManager.getRunningProcesses();
         const failedProcesses = this.processManager.getFailedProcesses();
 
@@ -392,6 +399,13 @@ export class ProxyApplication {
     }
 
     private handlePortsEndpoint(res: ServerResponse): void {
+        if (!this.portManager) {
+            this.sendErrorResponse(res, 503, 'Service Unavailable', {
+                error: 'Services not initialised',
+            });
+            return;
+        }
+
         const portInfo = {
             range: this.portManager.getPortRangeInfo(),
             allocations: this.portManager.getAllocations(),
@@ -403,6 +417,13 @@ export class ProxyApplication {
     }
 
     private handleMetricsEndpoint(res: ServerResponse): void {
+        if (!this.httpProxy || !this.requestRouter || !this.processManager || !this.portManager) {
+            this.sendErrorResponse(res, 503, 'Service Unavailable', {
+                error: 'Services not initialised',
+            });
+            return;
+        }
+
         const metrics = {
             proxy: this.httpProxy.getStats(),
             routing: this.requestRouter.getRoutingInfo(),
@@ -412,7 +433,7 @@ export class ProxyApplication {
                 failed: this.processManager.getFailedProcesses().length,
             },
             ports: this.portManager.getPortRangeInfo(),
-            auth: this.config.enableAuth ? this.authService.getStats() : null,
+            auth: this.config.enableAuth && this.authService ? this.authService.getStats() : null,
             timestamp: new Date().toISOString(),
         };
 
