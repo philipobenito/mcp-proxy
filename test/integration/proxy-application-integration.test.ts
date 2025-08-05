@@ -71,9 +71,7 @@ describe('ProxyApplication Integration', () => {
 
             expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
             expect(mockRes.writeHead).toHaveBeenCalledWith(200);
-            expect(mockRes.end).toHaveBeenCalledWith(
-                expect.stringMatching(/"name": "MCP Proxy"/)
-            );
+            expect(mockRes.end).toHaveBeenCalledWith(expect.stringMatching(/"name": "MCP Proxy"/));
         });
 
         it('should handle health endpoint requests', async () => {
@@ -113,9 +111,7 @@ describe('ProxyApplication Integration', () => {
 
             expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
             expect(mockRes.writeHead).toHaveBeenCalledWith(200);
-            expect(mockRes.end).toHaveBeenCalledWith(
-                expect.stringMatching(/"servers": \[/)
-            );
+            expect(mockRes.end).toHaveBeenCalledWith(expect.stringMatching(/"servers": \[/));
         });
 
         it('should handle ports endpoint requests', async () => {
@@ -136,9 +132,7 @@ describe('ProxyApplication Integration', () => {
 
             expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
             expect(mockRes.writeHead).toHaveBeenCalledWith(200);
-            expect(mockRes.end).toHaveBeenCalledWith(
-                expect.stringMatching(/"range":/)
-            );
+            expect(mockRes.end).toHaveBeenCalledWith(expect.stringMatching(/"range":/));
         });
 
         it('should handle stats endpoint requests', () => {
@@ -153,9 +147,7 @@ describe('ProxyApplication Integration', () => {
 
             expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
             expect(mockRes.writeHead).toHaveBeenCalledWith(200);
-            expect(mockRes.end).toHaveBeenCalledWith(
-                expect.stringMatching(/"application":/)
-            );
+            expect(mockRes.end).toHaveBeenCalledWith(expect.stringMatching(/"application":/));
         });
 
         it('should handle metrics endpoint when enabled', async () => {
@@ -176,9 +168,7 @@ describe('ProxyApplication Integration', () => {
 
             expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
             expect(mockRes.writeHead).toHaveBeenCalledWith(200);
-            expect(mockRes.end).toHaveBeenCalledWith(
-                expect.stringMatching(/"timestamp":/)
-            );
+            expect(mockRes.end).toHaveBeenCalledWith(expect.stringMatching(/"timestamp":/));
         });
     });
 
@@ -191,27 +181,35 @@ describe('ProxyApplication Integration', () => {
             }
 
             const mockReq = { method: 'GET', url: '/health', headers: {} };
-            const mockRes = { 
-                setHeader: vi.fn(), 
-                writeHead: vi.fn(), 
+            const mockRes = {
+                setHeader: vi.fn(),
+                writeHead: vi.fn(),
                 end: vi.fn(),
                 headersSent: false,
             };
 
-            const result = await app['handleBuiltinEndpoints'](mockReq as any, mockRes as any, '/health');
+            const result = await app['handleBuiltinEndpoints'](
+                mockReq as any,
+                mockRes as any,
+                '/health'
+            );
             expect(result).toBe(true);
         });
 
         it('should reject unknown builtin endpoints', async () => {
             const mockReq = { method: 'GET', url: '/unknown', headers: {} };
-            const mockRes = { 
-                setHeader: vi.fn(), 
-                writeHead: vi.fn(), 
+            const mockRes = {
+                setHeader: vi.fn(),
+                writeHead: vi.fn(),
                 end: vi.fn(),
                 headersSent: false,
             };
 
-            const result = await app['handleBuiltinEndpoints'](mockReq as any, mockRes as any, '/unknown');
+            const result = await app['handleBuiltinEndpoints'](
+                mockReq as any,
+                mockRes as any,
+                '/unknown'
+            );
             expect(result).toBe(false);
         });
     });

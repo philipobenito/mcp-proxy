@@ -256,7 +256,7 @@ export class AuthenticationService extends EventEmitter {
             type: string;
             hasCredentials: boolean;
         }>;
-        } {
+    } {
         const servers = Array.from(this.serverConfigs.values()).map(config => ({
             name: config.serverName,
             enabled: config.enabled,

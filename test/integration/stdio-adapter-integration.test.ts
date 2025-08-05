@@ -21,7 +21,7 @@ vi.mock('child_process', () => ({
 vi.mock('http', () => ({
     createServer: vi.fn(() => ({
         listen: vi.fn((port, host, callback) => callback()),
-        close: vi.fn((callback) => callback()),
+        close: vi.fn(callback => callback()),
         on: vi.fn(),
     })),
 }));
@@ -32,7 +32,7 @@ describe('StdioHttpAdapter Integration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         adapter = new StdioHttpAdapter({
             timeout: 5000,
             maxBufferSize: 1024,
@@ -54,7 +54,7 @@ describe('StdioHttpAdapter Integration', () => {
     describe('Adapter Creation and Management', () => {
         it('should create adapter for valid stdio server', async () => {
             const adapter_instance = await adapter.createAdapter(mockServer, 3001);
-            
+
             expect(adapter_instance).toBeDefined();
             expect(adapter_instance.server).toBe(mockServer);
             expect(adapter_instance.port).toBe(3001);
@@ -63,20 +63,20 @@ describe('StdioHttpAdapter Integration', () => {
 
         it('should create adapter without child process when no command', async () => {
             const serverWithoutCommand = { ...mockServer, command: undefined };
-            
+
             const adapter_instance = await adapter.createAdapter(serverWithoutCommand, 3002);
-            
+
             expect(adapter_instance.isHealthy).toBe(true);
             expect(adapter_instance.childProcess).toBeUndefined();
         });
 
         it('should track created adapters', async () => {
             await adapter.createAdapter(mockServer, 3001);
-            
+
             const allAdapters = adapter.getAllAdapters();
             expect(allAdapters).toHaveLength(1);
             expect(allAdapters[0].server.name).toBe('test-server');
-            
+
             const specificAdapter = adapter.getAdapter('test-server');
             expect(specificAdapter).toBeDefined();
             expect(specificAdapter?.port).toBe(3001);
@@ -84,11 +84,11 @@ describe('StdioHttpAdapter Integration', () => {
 
         it('should stop specific adapter', async () => {
             await adapter.createAdapter(mockServer, 3001);
-            
+
             expect(adapter.getAllAdapters()).toHaveLength(1);
-            
+
             await adapter.stopAdapter('test-server');
-            
+
             expect(adapter.getAllAdapters()).toHaveLength(0);
             expect(adapter.getAdapter('test-server')).toBeUndefined();
         });
@@ -101,7 +101,7 @@ describe('StdioHttpAdapter Integration', () => {
     describe('HTTP Request Handling', () => {
         it('should handle health check requests', async () => {
             const adapter_instance = await adapter.createAdapter(mockServer, 3001);
-            
+
             const mockRes = {
                 setHeader: vi.fn(),
                 writeHead: vi.fn(),
@@ -122,7 +122,7 @@ describe('StdioHttpAdapter Integration', () => {
         it('should handle health check for unhealthy adapter', async () => {
             const adapter_instance = await adapter.createAdapter(mockServer, 3001);
             adapter_instance.isHealthy = false;
-            
+
             const mockRes = {
                 setHeader: vi.fn(),
                 writeHead: vi.fn(),
@@ -140,7 +140,7 @@ describe('StdioHttpAdapter Integration', () => {
 
         it('should handle CORS preflight requests', async () => {
             await adapter.createAdapter(mockServer, 3001);
-            
+
             const mockReq = {
                 method: 'OPTIONS',
                 url: '/test',
@@ -157,8 +157,14 @@ describe('StdioHttpAdapter Integration', () => {
             await adapter['handleHttpRequest']('test-server', mockReq as any, mockRes as any);
 
             expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', '*');
-            expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            expect(mockRes.setHeader).toHaveBeenCalledWith(
+                'Access-Control-Allow-Methods',
+                'GET, POST, PUT, DELETE, OPTIONS'
+            );
+            expect(mockRes.setHeader).toHaveBeenCalledWith(
+                'Access-Control-Allow-Headers',
+                'Content-Type, Authorization'
+            );
             expect(mockRes.writeHead).toHaveBeenCalledWith(200);
             expect(mockRes.end).toHaveBeenCalled();
         });
@@ -189,7 +195,7 @@ describe('StdioHttpAdapter Integration', () => {
         it('should handle requests to adapter without child process', async () => {
             const serverWithoutCommand = { ...mockServer, command: undefined };
             await adapter.createAdapter(serverWithoutCommand, 3001);
-            
+
             const mockReq = {
                 method: 'POST',
                 url: '/api/test',
@@ -237,7 +243,7 @@ describe('StdioHttpAdapter Integration', () => {
 
         it('should reject oversized request bodies', async () => {
             const largeData = 'x'.repeat(2000); // Larger than maxBufferSize (1024)
-            
+
             const mockReq = {
                 on: vi.fn((event, callback) => {
                     if (event === 'data') {
@@ -248,8 +254,9 @@ describe('StdioHttpAdapter Integration', () => {
                 }),
             };
 
-            await expect(adapter['collectRequestBody'](mockReq as any))
-                .rejects.toThrow('Request body too large');
+            await expect(adapter['collectRequestBody'](mockReq as any)).rejects.toThrow(
+                'Request body too large'
+            );
         });
 
         it('should handle request errors', async () => {
@@ -261,8 +268,9 @@ describe('StdioHttpAdapter Integration', () => {
                 }),
             };
 
-            await expect(adapter['collectRequestBody'](mockReq as any))
-                .rejects.toThrow('Request error');
+            await expect(adapter['collectRequestBody'](mockReq as any)).rejects.toThrow(
+                'Request error'
+            );
         });
     });
 
@@ -276,8 +284,9 @@ describe('StdioHttpAdapter Integration', () => {
                 }),
             };
 
-            await expect(adapter['waitForProcessExit'](mockProcess as any, 100))
-                .resolves.not.toThrow();
+            await expect(
+                adapter['waitForProcessExit'](mockProcess as any, 100)
+            ).resolves.not.toThrow();
         });
 
         it('should timeout when process does not exit', async () => {
@@ -285,8 +294,9 @@ describe('StdioHttpAdapter Integration', () => {
                 once: vi.fn(),
             };
 
-            await expect(adapter['waitForProcessExit'](mockProcess as any, 50))
-                .rejects.toThrow('Process did not exit within 50ms');
+            await expect(adapter['waitForProcessExit'](mockProcess as any, 50)).rejects.toThrow(
+                'Process did not exit within 50ms'
+            );
         });
     });
 });

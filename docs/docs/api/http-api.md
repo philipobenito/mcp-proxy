@@ -19,7 +19,7 @@ http://localhost:3000
 Authentication is optional and can be enabled via environment variables. When enabled, MCP Proxy supports multiple authentication methods:
 
 - **Bearer Token Authentication**
-- **Basic Authentication** 
+- **Basic Authentication**
 - **API Key Authentication**
 
 Configure authentication in your `.env` file:
@@ -170,7 +170,7 @@ Get information about port allocations and availability.
             "allocatedAt": "2024-08-04T09:30:00.000Z"
         },
         {
-            "serverName": "memory", 
+            "serverName": "memory",
             "port": 3002,
             "allocatedAt": "2024-08-04T09:30:00.000Z"
         }
@@ -192,7 +192,7 @@ Get basic application statistics.
         "uptime": 3600,
         "memory": {
             "rss": 45678592,
-            "heapTotal": 29360128, 
+            "heapTotal": 29360128,
             "heapUsed": 18234567,
             "external": 1234567,
             "arrayBuffers": 123456
@@ -317,7 +317,7 @@ All error responses follow a consistent format:
 ### Common HTTP Status Codes
 
 - **200**: Success
-- **404**: Server or endpoint not found  
+- **404**: Server or endpoint not found
 - **500**: Internal server error
 - **503**: Service unavailable (server unhealthy)
 

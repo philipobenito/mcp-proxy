@@ -193,7 +193,7 @@ export class RequestRouter {
             protocol: string;
             pattern: string;
         }>;
-        } {
+    } {
         const routes = Array.from(this.servers.values()).map(server => ({
             name: server.name,
             type: server.detectedType,

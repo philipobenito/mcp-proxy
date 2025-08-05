@@ -45,7 +45,7 @@ describe('ProxyApplication Coverage Tests', () => {
 
             expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
             expect(mockRes.writeHead).toHaveBeenCalledWith(400);
-            
+
             const responseData = JSON.parse((mockRes.end as any).mock.calls[0][0]);
             expect(responseData.error).toBe('Bad Request');
             expect(responseData.statusCode).toBe(400);
@@ -61,7 +61,7 @@ describe('ProxyApplication Coverage Tests', () => {
                 enableAuth: true,
                 enableMetrics: false,
             });
-            
+
             expect(authApp).toBeInstanceOf(ProxyApplication);
         });
 
@@ -71,14 +71,14 @@ describe('ProxyApplication Coverage Tests', () => {
                 enableMetrics: false,
                 enableAuth: false,
             });
-            
+
             const endpoints = minimalApp['getEndpoints']();
             expect(endpoints).not.toHaveProperty('metrics');
         });
 
         it('should handle environment variable parsing edge cases', () => {
             const originalEnv = process.env;
-            
+
             process.env = {
                 ...originalEnv,
                 PORT: 'invalid',
@@ -89,7 +89,7 @@ describe('ProxyApplication Coverage Tests', () => {
             // Should fall back to defaults when parsing fails
             const envApp = new ProxyApplication();
             expect(envApp).toBeInstanceOf(ProxyApplication);
-            
+
             process.env = originalEnv;
         });
     });
@@ -144,7 +144,7 @@ describe('ProxyApplication Coverage Tests', () => {
 
         it('should handle CORS disabled configuration', async () => {
             const noCorsApp = new ProxyApplication({ enableCors: false });
-            
+
             const mockReq = {
                 method: 'GET',
                 url: '/',
@@ -171,16 +171,20 @@ describe('ProxyApplication Coverage Tests', () => {
 
         it('should handle metrics disabled in builtin endpoints', async () => {
             const noMetricsApp = new ProxyApplication({ enableMetrics: false });
-            
+
             const mockReq = { method: 'GET', url: '/metrics', headers: {} };
-            const mockRes = { 
-                setHeader: vi.fn(), 
-                writeHead: vi.fn(), 
+            const mockRes = {
+                setHeader: vi.fn(),
+                writeHead: vi.fn(),
                 end: vi.fn(),
                 headersSent: false,
             };
 
-            const result = await noMetricsApp['handleBuiltinEndpoints'](mockReq as any, mockRes as any, '/metrics');
+            const result = await noMetricsApp['handleBuiltinEndpoints'](
+                mockReq as any,
+                mockRes as any,
+                '/metrics'
+            );
             expect(result).toBe(false);
         });
     });
@@ -188,7 +192,7 @@ describe('ProxyApplication Coverage Tests', () => {
     describe('Startup Error Scenarios', () => {
         it('should handle start without initialization', async () => {
             const uninitApp = new ProxyApplication();
-            
+
             await expect(uninitApp.start()).rejects.toThrow('Application not initialised');
         });
     });
