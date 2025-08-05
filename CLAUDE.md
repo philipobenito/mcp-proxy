@@ -27,7 +27,7 @@ This file provides essential guidance to LLMs when working with this repository.
 ### Project Planning and Issue Management
 
 - **CRITICAL**: Follow the guidelines in `PLANNING.md` for all GitHub issue creation and management
-- **Always use the prescribed workflow**: MCP server → VS Code extensions → GitHub CLI as fallbacks
+- **Always use the prescribed workflow**: MCP server to VS Code extensions to GitHub CLI as fallbacks
 - **Maintain proper issue linking**: Use GitHub's native linking syntax for epics and related work
 - **Follow issue templates**: Ensure consistent structure and required information in all issues
 - **Never create issues without proper planning**: Each issue must have clear acceptance criteria and testing requirements
@@ -43,6 +43,7 @@ Run these commands in sequence after completing your work:
 ```bash
 npm run format     # Format all code with Prettier
 npm run lint       # Check for ESLint violations
+npm run typecheck  # Check TypeScript types
 npm run test       # Run the test suite
 ```
 
@@ -57,4 +58,4 @@ npm run test       # Run the test suite
 - `npm run android` - Run the app on Android
 - `npm run ios` - Run the app on iOS
 
-**Critical:** Always run `format`, `lint`, and `test` before submitting any code changes.
+**Critical:** Always run `format`, `lint`, `typecheck`, and `test` before submitting any code changes.

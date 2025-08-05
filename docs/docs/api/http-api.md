@@ -16,17 +16,17 @@ http://localhost:3000
 
 ## Authentication
 
-MCP Proxy uses HTTP Basic Authentication:
+Authentication is optional and can be enabled via environment variables. When enabled, MCP Proxy supports multiple authentication methods:
 
-```bash
-curl -u username:password http://localhost:3000/api/endpoint
-```
+- **Bearer Token Authentication**
+- **Basic Authentication**
+- **API Key Authentication**
 
-Configure credentials in your `.env` file:
+Configure authentication in your `.env` file:
 
 ```env
-BASIC_AUTH_USERNAME=admin
-BASIC_AUTH_PASSWORD=your-secure-password
+ENABLE_AUTH=true
+# Configure your authentication method as needed
 ```
 
 ## Content Types
@@ -38,11 +38,46 @@ Content-Type: application/json
 Accept: application/json
 ```
 
-## Health Endpoints
+## Core Endpoints
+
+### GET /
+
+Returns general information about the MCP Proxy instance.
+
+**Response:**
+
+```json
+{
+    "name": "MCP Proxy",
+    "version": "1.0.0",
+    "description": "HTTP proxy and request management system for MCP servers",
+    "endpoints": {
+        "root": "/",
+        "health": "/health",
+        "servers": "/servers",
+        "ports": "/ports",
+        "stats": "/stats",
+        "metrics": "/metrics"
+    },
+    "servers": [
+        {
+            "name": "filesystem",
+            "type": "docker",
+            "protocol": "stdio",
+            "url": "/filesystem/*"
+        }
+    ],
+    "features": {
+        "cors": true,
+        "metrics": true,
+        "auth": false
+    }
+}
+```
 
 ### GET /health
 
-Returns the overall health status of the proxy.
+Returns the overall health status of the proxy and managed servers.
 
 **Response:**
 
@@ -51,41 +86,24 @@ Returns the overall health status of the proxy.
     "status": "healthy",
     "timestamp": "2024-08-04T10:30:00.000Z",
     "uptime": 3600,
-    "version": "1.0.0"
-}
-```
-
-### GET /health/servers
-
-Returns the health status of all managed MCP servers.
-
-**Response:**
-
-```json
-{
-    "status": "healthy",
     "servers": {
-        "filesystem": {
-            "status": "healthy",
-            "port": 3001,
-            "uptime": 3600,
-            "lastCheck": "2024-08-04T10:30:00.000Z"
-        },
-        "memory": {
-            "status": "healthy",
-            "port": 3002,
-            "uptime": 3580,
-            "lastCheck": "2024-08-04T10:30:00.000Z"
-        }
+        "total": 3,
+        "running": 3,
+        "failed": 0
+    },
+    "memory": {
+        "rss": 45678592,
+        "heapTotal": 29360128,
+        "heapUsed": 18234567,
+        "external": 1234567,
+        "arrayBuffers": 123456
     }
 }
 ```
 
-## Server Management
+### GET /servers
 
-### GET /api/servers
-
-List all configured MCP servers.
+List all configured MCP servers with their current status.
 
 **Response:**
 
@@ -94,112 +112,96 @@ List all configured MCP servers.
     "servers": [
         {
             "name": "filesystem",
-            "description": "File system operations server",
-            "status": "running",
-            "port": 3001,
             "type": "docker",
-            "command": "docker run -i --rm mcp/filesystem"
+            "protocol": "stdio",
+            "url": null,
+            "command": "docker run -i --rm mcp/filesystem",
+            "args": ["-i", "--rm", "mcp/filesystem"],
+            "capabilities": {
+                "requiresStdio": true
+            },
+            "port": 3001,
+            "status": "running",
+            "pid": 12345,
+            "restartCount": 0,
+            "startedAt": "2024-08-04T09:30:00.000Z"
         },
         {
             "name": "memory",
-            "description": "Memory operations server",
-            "status": "running",
-            "port": 3002,
             "type": "npx",
-            "command": "npx -y @modelcontextprotocol/server-memory"
+            "protocol": "stdio",
+            "url": null,
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-memory"],
+            "capabilities": {
+                "requiresStdio": true
+            },
+            "port": 3002,
+            "status": "running",
+            "pid": 12346,
+            "restartCount": 1,
+            "startedAt": "2024-08-04T09:32:00.000Z"
         }
-    ]
+    ],
+    "count": 2,
+    "timestamp": "2024-08-04T10:30:00.000Z"
 }
 ```
 
-### GET /api/servers/\{name\}
+### GET /ports
 
-Get details for a specific server.
-
-**Parameters:**
-
-- `name` (string, required): Server name
+Get information about port allocations and availability.
 
 **Response:**
 
 ```json
 {
-    "name": "filesystem",
-    "description": "File system operations server",
-    "status": "running",
-    "port": 3001,
-    "type": "docker",
-    "command": "docker run -i --rm mcp/filesystem",
-    "uptime": 3600,
-    "startedAt": "2024-08-04T09:30:00.000Z",
-    "env": {
-        "DEBUG": "true"
-    }
+    "range": {
+        "start": 3001,
+        "end": 3099,
+        "total": 99,
+        "allocated": 2,
+        "available": 97
+    },
+    "allocations": [
+        {
+            "serverName": "filesystem",
+            "port": 3001,
+            "allocatedAt": "2024-08-04T09:30:00.000Z"
+        },
+        {
+            "serverName": "memory",
+            "port": 3002,
+            "allocatedAt": "2024-08-04T09:30:00.000Z"
+        }
+    ],
+    "reserved": [],
+    "timestamp": "2024-08-04T10:30:00.000Z"
 }
 ```
 
-### POST /api/servers/\{name\}/restart
+### GET /stats
 
-Restart a specific server.
-
-**Parameters:**
-
-- `name` (string, required): Server name
+Get basic application statistics.
 
 **Response:**
 
 ```json
 {
-    "success": true,
-    "message": "Server 'filesystem' restarted successfully",
-    "server": {
-        "name": "filesystem",
-        "status": "starting",
-        "port": 3001
-    }
-}
-```
-
-### POST /api/servers/\{name\}/stop
-
-Stop a specific server.
-
-**Parameters:**
-
-- `name` (string, required): Server name
-
-**Response:**
-
-```json
-{
-    "success": true,
-    "message": "Server 'filesystem' stopped successfully",
-    "server": {
-        "name": "filesystem",
-        "status": "stopped"
-    }
-}
-```
-
-### POST /api/servers/\{name\}/start
-
-Start a specific server.
-
-**Parameters:**
-
-- `name` (string, required): Server name
-
-**Response:**
-
-```json
-{
-    "success": true,
-    "message": "Server 'filesystem' started successfully",
-    "server": {
-        "name": "filesystem",
-        "status": "running",
-        "port": 3001
-    }
+    "application": {
+        "uptime": 3600,
+        "memory": {
+            "rss": 45678592,
+            "heapTotal": 29360128,
+            "heapUsed": 18234567,
+            "external": 1234567,
+            "arrayBuffers": 123456
+        },
+        "version": "1.0.0"
+    },
+    "servers": 2,
+    "activeConnections": 0,
+    "timestamp": "2024-08-04T10:30:00.000Z"
 }
 ```
 
@@ -262,62 +264,39 @@ Access a resource from the specified MCP server.
 }
 ```
 
-## Configuration
+### GET /metrics
 
-### GET /api/config
-
-Get current proxy configuration.
+Get detailed metrics and statistics (when metrics are enabled).
 
 **Response:**
 
 ```json
 {
-    "version": "1.0.0",
-    "nodeEnv": "production",
-    "port": 3000,
-    "portRange": {
-        "start": 3001,
-        "end": 3099
+    "proxy": {
+        "totalRequests": 1250,
+        "successfulRequests": 1200,
+        "failedRequests": 50,
+        "averageResponseTime": 150
     },
-    "logging": {
-        "level": "info",
-        "format": "json"
+    "routing": {
+        "registeredServers": 2,
+        "totalRoutes": 2,
+        "routingErrors": 0
     },
-    "serversConfigPath": "servers.json",
-    "serversDirectoryPath": "servers/"
-}
-```
-
-## Metrics
-
-### GET /api/metrics
-
-Get proxy metrics and statistics.
-
-**Response:**
-
-```json
-{
-    "requests": {
-        "total": 1250,
-        "success": 1200,
-        "errors": 50,
-        "rate": 2.1
-    },
-    "servers": {
-        "total": 3,
-        "running": 3,
-        "stopped": 0,
+    "processes": {
+        "total": 2,
+        "running": 2,
         "failed": 0
     },
-    "system": {
-        "uptime": 86400,
-        "memory": {
-            "used": 256,
-            "total": 1024
-        },
-        "cpu": 15.5
-    }
+    "ports": {
+        "start": 3001,
+        "end": 3099,
+        "total": 99,
+        "allocated": 2,
+        "available": 97
+    },
+    "auth": null,
+    "timestamp": "2024-08-04T10:30:00.000Z"
 }
 ```
 
@@ -327,72 +306,27 @@ All error responses follow a consistent format:
 
 ```json
 {
-    "success": false,
-    "error": {
-        "code": "SERVER_NOT_FOUND",
-        "message": "Server 'unknown' not found",
-        "details": {
-            "serverName": "unknown",
-            "availableServers": ["filesystem", "memory"]
-        }
-    },
-    "timestamp": "2024-08-04T10:30:00.000Z"
+    "error": "Not Found",
+    "statusCode": 404,
+    "timestamp": "2024-08-04T10:30:00.000Z",
+    "message": "No server found for path /unknown",
+    "availableServers": ["filesystem", "memory"]
 }
 ```
 
-### Common Error Codes
+### Common HTTP Status Codes
 
-- `SERVER_NOT_FOUND`: Requested server does not exist
-- `SERVER_NOT_RUNNING`: Server exists but is not currently running
-- `TOOL_NOT_FOUND`: Requested tool does not exist on the server
-- `VALIDATION_ERROR`: Request validation failed
-- `INTERNAL_ERROR`: Internal server error
-- `AUTHENTICATION_REQUIRED`: Basic auth credentials required
-- `RATE_LIMIT_EXCEEDED`: Too many requests
+- **200**: Success
+- **404**: Server or endpoint not found
+- **500**: Internal server error
+- **503**: Service unavailable (server unhealthy)
 
-## Rate Limiting
+### CORS Support
 
-The API implements rate limiting to prevent abuse:
+When CORS is enabled (default), the proxy automatically handles preflight OPTIONS requests and includes appropriate CORS headers:
 
-- **Default limit**: 100 requests per minute per IP
-- **Headers included in response**:
-    - `X-RateLimit-Limit`: Request limit per window
-    - `X-RateLimit-Remaining`: Requests remaining in current window
-    - `X-RateLimit-Reset`: Time when rate limit resets
-
-When rate limit is exceeded:
-
-```json
-{
-    "success": false,
-    "error": {
-        "code": "RATE_LIMIT_EXCEEDED",
-        "message": "Too many requests. Please try again later.",
-        "retryAfter": 60
-    }
-}
 ```
-
-## WebSocket API
-
-For real-time communication with MCP servers:
-
-```javascript
-const ws = new WebSocket('ws://localhost:3000/ws/\{server-name\}');
-
-ws.onopen = () => {
-    // Send MCP messages directly
-    ws.send(
-        JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'tools/list',
-            id: 1,
-        })
-    );
-};
-
-ws.onmessage = event => {
-    const response = JSON.parse(event.data);
-    console.log('MCP Response:', response);
-};
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
 ```

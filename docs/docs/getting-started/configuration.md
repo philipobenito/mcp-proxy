@@ -12,12 +12,19 @@ The proxy requires minimal configuration. Create a `.env` file in your project r
 # Basic configuration
 NODE_ENV=production
 PORT=3000
-BASIC_AUTH_USERNAME=admin
-BASIC_AUTH_PASSWORD=your-secure-password-here
+HOST=0.0.0.0
 
-# Optional: Custom port range for servers
-PORT_RANGE_START=3001
-PORT_RANGE_END=3099
+# MCP server port range
+MCP_PORT_START=3001
+MCP_PORT_END=3099
+
+# Optional features (all enabled by default except auth)
+ENABLE_CORS=true
+ENABLE_METRICS=true
+ENABLE_AUTH=false
+
+# Authentication (when ENABLE_AUTH=true)
+# Configure your authentication method as needed
 ```
 
 ## Server Configuration

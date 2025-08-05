@@ -33,9 +33,9 @@ export default [
             '@typescript-eslint/no-unused-vars': 'warn',
             '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/no-explicit-any': 'warn',
-            indent: ['error', 4, { SwitchCase: 1 }],
-            quotes: ['error', 'single'],
-            semi: ['error', 'always'],
+            // Let Prettier handle all formatting - disable conflicting ESLint rules
+            // Prettier will enforce: 4 spaces, single quotes, semicolons, trailing commas
+            // ESLint focuses on code quality and logic issues
         },
     },
     {
